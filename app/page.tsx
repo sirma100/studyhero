@@ -113,6 +113,16 @@ export default function Home() {
       });
       localStorage.setItem('studyhero-signups', JSON.stringify(submissions));
 
+      // Track conversion with Meta Pixel
+      if (typeof window !== 'undefined' && (window as any).fbq) {
+        (window as any).fbq('track', 'Lead', {
+          content_name: 'Waitlist Signup',
+          content_category: 'Education',
+          value: 0,
+          currency: 'KES'
+        });
+      }
+
       setSubmitted(true);
     } catch (error) {
       console.error('Error submitting form:', error);
