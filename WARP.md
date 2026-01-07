@@ -9,7 +9,7 @@ StudyHero.co.ke is a **validation landing page** for a CourseHero-style platform
 **Key Validation Metrics:**
 - Target: 100+ signups in 7 days
 - Success threshold: 40%+ willing to pay KES 300/month
-- Data storage: JSON file via API endpoint (with localStorage backup)
+- Data storage: Supabase (PostgreSQL)
 
 ## Development Commands
 
@@ -45,7 +45,8 @@ vercel
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS v4
 - **State:** React hooks (useState, useEffect)
-- **Data Storage:** localStorage (temporary validation)
+- **Database:** Supabase (PostgreSQL)
+- **Data Storage:** Supabase with localStorage backup on frontend
 
 ### App Structure
 
@@ -54,12 +55,12 @@ This is a Next.js App Router project with two main routes:
 **`app/page.tsx`** - Landing page with waitlist form
 - Client component (`'use client'`)
 - Captures: name, email, phone, university, course, year, payment willingness
-- Stores submissions in localStorage under key `'studyhero-signups'`
+- Submits to `/api/signups` endpoint (stored in Supabase)
 - Mobile-first design (90% of target users are mobile)
 
 **`app/admin/page.tsx`** - Admin dashboard
 - Client component for viewing signup data
-- Reads from localStorage
+- Reads from `/api/signups` endpoint
 - Displays validation metrics and decision guidance
 - CSV export functionality
 - Accessible at `/admin` (no authentication - add if needed)
@@ -74,16 +75,21 @@ This is a Next.js App Router project with two main routes:
 - Dark mode support (prefers-color-scheme)
 
 **`app/api/signups/route.ts`** - API endpoint for signup data
-- POST: Save new signup to `data/signups.json`
-- GET: Retrieve all signups
+- POST: Save new signup to Supabase
+- GET: Retrieve all signups from Supabase
 - Validates required fields
-- Creates `data/` directory if it doesn't exist
+- Transforms data between camelCase (API) and snake_case (database)
+
+**`lib/supabase.ts`** - Supabase client configuration
+- Initializes Supabase client with environment variables
+- Used by API routes to interact with database
 
 ### Data Model
 
-Signup object stored in localStorage:
+Signup object (API format):
 ```typescript
 {
+  id: string;              // UUID from Supabase
   name: string;
   email: string;
   phone: string;           // M-Pesa number
@@ -91,9 +97,13 @@ Signup object stored in localStorage:
   course: string;
   year: string;            // "1", "2", "3", "4", "5+"
   willingToPay: string;    // "yes", "maybe", "no"
-  timestamp: string;       // ISO datetime
+  timestamp: string;       // ISO datetime (created_at)
 }
 ```
+
+Database schema (Supabase):
+- Table: `signups`
+- See `supabase-schema.sql` for complete schema
 
 ### Universities Supported
 The form includes 13 Kenyan universities: University of Nairobi, Kenyatta University, JKUAT, Strathmore, Moi, Egerton, MMUST, Technical University of Kenya, USIU-Africa, Daystar, Mount Kenya University, KCA University, and "Other".
@@ -102,10 +112,9 @@ The form includes 13 Kenyan universities: University of Nairobi, Kenyatta Univer
 
 1. **This is validation-only** - Avoid over-engineering. The purpose is to test market demand with minimal features.
 
-2. **No real database yet** - Data is stored in localStorage. To upgrade to persistent storage:
-   - Supabase (recommended for MVP)
-   - Google Sheets via form service
-   - See README.md for migration SQL schema
+2. **Supabase setup required** - Must configure Supabase environment variables before deployment:
+   - See `SUPABASE_SETUP.md` for step-by-step instructions
+   - Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to Vercel
 
 3. **No authentication on admin page** - `/admin` is publicly accessible. Add basic auth if deploying with real user data.
 

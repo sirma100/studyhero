@@ -92,35 +92,17 @@ Follow prompts. Your site will be live at `your-project.vercel.app`
 2. Connect GitHub repo to Netlify
 3. Deploy
 
-## Upgrading to Real Database
+## Database Setup (Required for Production)
 
-Currently uses `localStorage` (client-side only). To collect real data:
+✅ **Supabase is already integrated!** The app uses Supabase for persistent storage.
 
-### Option A: Supabase (Free tier)
-1. Create Supabase project
-2. Create `signups` table:
-```sql
-create table signups (
-  id uuid default uuid_generate_v4() primary key,
-  name text not null,
-  email text not null,
-  phone text not null,
-  university text not null,
-  course text not null,
-  year text not null,
-  willing_to_pay text not null,
-  created_at timestamp default now()
-);
-```
-3. Replace localStorage code with Supabase client
+**To complete the setup:**
+1. Follow the step-by-step guide in **[SUPABASE_SETUP.md](./SUPABASE_SETUP.md)**
+2. Create a Supabase project (free tier)
+3. Run the SQL schema from `supabase-schema.sql`
+4. Add environment variables locally and on Vercel
 
-### Option B: Google Sheets (Easiest)
-Use a form service like:
-- Tally.so
-- Typeform
-- Google Forms
-
-Redirect form submissions to Google Sheets
+Without Supabase setup, the app will fail when users submit the form.
 
 ## Running Facebook Ads
 

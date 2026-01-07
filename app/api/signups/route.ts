@@ -1,37 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, readFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import path from 'path';
-
-const DATA_DIR = path.join(process.cwd(), 'data');
-const DATA_FILE = path.join(DATA_DIR, 'signups.json');
-
-// Ensure data directory exists
-async function ensureDataDir() {
-  if (!existsSync(DATA_DIR)) {
-    await mkdir(DATA_DIR, { recursive: true });
-  }
-}
-
-// Read existing signups
-async function readSignups() {
-  try {
-    if (existsSync(DATA_FILE)) {
-      const data = await readFile(DATA_FILE, 'utf-8');
-      return JSON.parse(data);
-    }
-    return [];
-  } catch (error) {
-    console.error('Error reading signups:', error);
-    return [];
-  }
-}
-
-// Write signups to file
-async function writeSignups(signups: any[]) {
-  await ensureDataDir();
-  await writeFile(DATA_FILE, JSON.stringify(signups, null, 2), 'utf-8');
-}
+import { supabase } from '@/lib/supabase';
 
 // POST: Add a new signup
 export async function POST(request: NextRequest) {
@@ -49,22 +17,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Read existing signups
-    const signups = await readSignups();
+    // Insert into Supabase
+    const { data, error } = await supabase
+      .from('signups')
+      .insert([{
+        name: body.name,
+        email: body.email,
+        phone: body.phone,
+        university: body.university,
+        course: body.course,
+        year: body.year,
+        willing_to_pay: body.willingToPay
+      }])
+      .select()
+      .single();
 
-    // Add new signup with timestamp
-    const newSignup = {
-      ...body,
-      timestamp: new Date().toISOString()
-    };
-    
-    signups.push(newSignup);
-
-    // Write back to file
-    await writeSignups(signups);
+    if (error) {
+      console.error('Supabase error:', error);
+      return NextResponse.json(
+        { error: 'Failed to save signup' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(
-      { success: true, message: 'Signup saved successfully', data: newSignup },
+      { success: true, message: 'Signup saved successfully', data },
       { status: 201 }
     );
   } catch (error) {
@@ -79,8 +56,33 @@ export async function POST(request: NextRequest) {
 // GET: Retrieve all signups
 export async function GET() {
   try {
-    const signups = await readSignups();
-    return NextResponse.json({ success: true, data: signups });
+    const { data, error } = await supabase
+      .from('signups')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch signups' },
+        { status: 500 }
+      );
+    }
+
+    // Transform data to match existing format (snake_case to camelCase)
+    const formattedData = data.map(signup => ({
+      id: signup.id,
+      name: signup.name,
+      email: signup.email,
+      phone: signup.phone,
+      university: signup.university,
+      course: signup.course,
+      year: signup.year,
+      willingToPay: signup.willing_to_pay,
+      timestamp: signup.created_at
+    }));
+
+    return NextResponse.json({ success: true, data: formattedData });
   } catch (error) {
     console.error('Error fetching signups:', error);
     return NextResponse.json(
